@@ -84,6 +84,9 @@ psychoJS.experimentLogger.setLevel(core.Logger.ServerLevel.INFO);
 
 var currentLoop;
 var frameDur;
+let exportData = [];
+let Q1_answer = '';
+let Q2_answer = '';
 async function updateInfo() {
   currentLoop = psychoJS.experiment;  // right now there are no loops
   expInfo['date'] = util.MonotonicClock.getDateStr();  // add a simple timestamp
@@ -861,6 +864,12 @@ function trialRoutineEnd(snapshot) {
     }
     psychoJS.experiment.addData('trial.stopped', globalClock.getTime());
     psychoJS.experiment.addData('textbox.text',textbox.text)
+    exportData.push({
+        N: N,
+        context: OWA,
+        frame: neg
+        answer: textbox.text
+    });
     psychoJS.experiment.addData('response', textbox.text);
     psychoJS.experiment.addData('statement', neg);
     psychoJS.experiment.addData('context', OWA);
@@ -1081,6 +1090,7 @@ function Q1RoutineEnd(snapshot) {
     }
     psychoJS.experiment.addData('Q1.stopped', globalClock.getTime());
     psychoJS.experiment.addData('textbox_2.text',textbox_2.text)
+    Q1_answer = textbox_2.text;
     psychoJS.experiment.addData('Q1_answer', textbox_2.text);
     // store data for psychoJS.experiment (ExperimentHandler)
     psychoJS.experiment.addData('mouse_2.x', mouse_2.x);
@@ -1299,6 +1309,7 @@ function Q2RoutineEnd(snapshot) {
     }
     psychoJS.experiment.addData('Q2.stopped', globalClock.getTime());
     psychoJS.experiment.addData('textbox_3.text',textbox_3.text)
+    Q2_answer = textbox_3.text;
     psychoJS.experiment.addData('Q2_answer', textbox_3.text);
     // store data for psychoJS.experiment (ExperimentHandler)
     psychoJS.experiment.addData('mouse_3.x', mouse_3.x);
@@ -1352,11 +1363,26 @@ function thanksRoutineBegin(snapshot) {
     
     let filename = psychoJS._experiment._experimentName + '_' + psychoJS._experiment._datetime + '.csv';
     
-    let dataObj = psychoJS._experiment._trialsData;
-    
-    let data = [Object.keys(dataObj[0])].concat(dataObj).map(it => {
-        return Object.values(it).toString()
-    }).join('\n')
+    exportData.forEach(row => {
+        row.Q1 = Q1_answer;
+        row.Q2 = Q2_answer;
+    });
+
+    let header = ['N','neg','answer','Q1','Q2'];
+
+    let rows = exportData.map(row =>
+        [
+            row.N,
+            '"' + row.neg.replace(/"/g, '""') + '"',
+            row.answer,
+            row.Q1,
+            row.Q2
+        ].join(',')
+    );
+
+    let data = [header.join(',')]
+        .concat(rows)
+        .join('\n');
     
     console.log('Saving data...');
     fetch('https://pipe.jspsych.org/api/data', {
